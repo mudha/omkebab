@@ -10,7 +10,7 @@ const COOKIE_NAME = "om-kebab-token";
 const EXPIRES_IN = 60 * 60 * 24 * 7; // 7 hari
 
 export interface JWTPayload {
-  userId: string;
+  id: string; // Changed from userId to id for consistency
   username: string;
   name: string;
   role: "ADMIN" | "EMPLOYEE";
