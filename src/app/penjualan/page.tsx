@@ -8,20 +8,17 @@ import { CurrencyText } from "@/components/ui/CurrencyText";
 import { Product, Branch, User } from "@/types";
 import { Store, ShoppingBag, X } from "lucide-react";
 
-const METODE_OPTIONS = [
-  { value: "OFFLINE", label: "Langsung" },
-  { value: "SHOPEEFOOD", label: "ShopeeFood" },
-  { value: "GRABFOOD", label: "GrabFood" },
-];
+
 
 export default function PenjualanPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [methods, setMethods] = useState<{ id: string; name: string; code: string; isActive: boolean }[]>([]);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [branchId, setBranchId] = useState("");
-  const [salesMethod, setSalesMethod] = useState("OFFLINE");
+  const [salesMethod, setSalesMethod] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   
@@ -34,26 +31,35 @@ export default function PenjualanPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [userRes, productRes, branchRes] = await Promise.all([
+      const [userRes, productRes, branchRes, methodRes] = await Promise.all([
         fetch("/api/auth/me"),
         fetch("/api/products?active=true"),
         fetch("/api/branches"),
+        fetch("/api/sales-methods?active=true"),
       ]);
       if (!userRes.ok) { router.push("/login"); return; }
       
-      if (!productRes.ok || !branchRes.ok) {
+      if (!productRes.ok || !branchRes.ok || !methodRes.ok) {
         throw new Error("Gagal mengambil data dari server");
       }
 
       const userData = await userRes.json();
       const productsData = await productRes.json();
       const branchesData = await branchRes.json();
+      const methodsData = await methodRes.json();
 
       setUser(userData.user);
       setProducts(Array.isArray(productsData) ? productsData : []);
       setBranches(Array.isArray(branchesData) ? branchesData : []);
-
+      
+      const methodsArray = Array.isArray(methodsData) ? methodsData : [];
+      setMethods(methodsArray);
+      
       if (userData.user?.branchId) setBranchId(userData.user.branchId);
+      if (methodsArray.length > 0) {
+        const offlineMethod = methodsArray.find(m => m.code === "OFFLINE") || methodsArray[0];
+        setSalesMethod(offlineMethod.code);
+      }
     } catch (error) {
       console.error("Gagal memuat data penjualan:", error);
     } finally {
@@ -77,8 +83,15 @@ export default function PenjualanPage() {
     if (branchId) fetchDailyStats(branchId);
   }, [branchId, fetchDailyStats]);
 
+  const getProductPrice = (product: Product, methodCode: string) => {
+    const methodObj = methods.find(m => m.code === methodCode);
+    if (!methodObj) return 0; // fallback
+    const priceObj = product.prices?.find(p => p.salesMethodId === methodObj.id);
+    return priceObj ? priceObj.price : 0;
+  };
+
   const totalAmount = products.reduce((sum, p) => {
-    return sum + (quantities[p.id] ?? 0) * p.price;
+    return sum + (quantities[p.id] ?? 0) * getProductPrice(p, salesMethod);
   }, 0);
 
   const totalItems = Object.values(quantities).reduce((a, b) => a + b, 0);
@@ -98,7 +111,11 @@ export default function PenjualanPage() {
   const handleReset = () => {
     setQuantities({});
     if (!user?.branchId) setBranchId("");
-    setSalesMethod("OFFLINE");
+    if (methods.length > 0) {
+      setSalesMethod(methods.find(m => m.code === "OFFLINE")?.code || methods[0].code);
+    } else {
+      setSalesMethod("");
+    }
     setEditTransactionId(null);
   };
 
@@ -225,20 +242,20 @@ export default function PenjualanPage() {
               <ShoppingBag size={18} className="text-blue-500" /> Metode Pesanan
             </label>
             <div className="grid grid-cols-3 gap-2 p-1 bg-gray-100/80 rounded-[20px]">
-              {METODE_OPTIONS.map((opt) => {
-                const isActive = salesMethod === opt.value;
+              {methods.map((opt) => {
+                const isActive = salesMethod === opt.code;
                 return (
                   <button
-                    key={opt.value}
-                    id={`metode-${opt.value.toLowerCase()}`}
-                    onClick={() => setSalesMethod(opt.value)}
+                    key={opt.code}
+                    id={`metode-${opt.code.toLowerCase()}`}
+                    onClick={() => setSalesMethod(opt.code)}
                     className={`relative py-3 rounded-2xl text-sm font-bold transition-all duration-300 ${
                       isActive
                         ? "bg-white text-orange-600 shadow-sm border-gray-200/50 scale-100"
                         : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50 scale-95"
                     }`}
                   >
-                    {opt.label}
+                    {opt.name}
                   </button>
                 );
               })}
@@ -259,6 +276,7 @@ export default function PenjualanPage() {
                 <ProductCard
                   key={product.id}
                   product={product}
+                  price={getProductPrice(product, salesMethod)}
                   quantity={quantities[product.id] ?? 0}
                   onIncrease={() => handleIncrease(product.id)}
                   onDecrease={() => handleDecrease(product.id)}
@@ -347,7 +365,7 @@ export default function PenjualanPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-semibold text-gray-500">Metode</span>
-                  <span className="text-sm font-bold text-gray-800">{METODE_OPTIONS.find((o) => o.value === salesMethod)?.label}</span>
+                  <span className="text-sm font-bold text-gray-800">{methods.find((o) => o.code === salesMethod)?.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-semibold text-gray-500">Item</span>

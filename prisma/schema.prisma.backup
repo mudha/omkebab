@@ -34,11 +34,11 @@ model User {
 model Product {
   id               String            @id @default(cuid())
   name             String
+  price            Int
   isActive         Boolean           @default(true)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   transactionItems TransactionItem[]
-  prices           ProductPrice[]
 }
 
 model Transaction {
@@ -46,7 +46,7 @@ model Transaction {
   transactionNumber String            @unique
   createdAt         DateTime          @default(now())
   branchId          String
-  salesMethod       String
+  salesMethod       SalesMethod
   totalAmount       Int
   createdByUserId   String
   branch            Branch            @relation(fields: [branchId], references: [id])
@@ -75,25 +75,8 @@ enum Role {
   EMPLOYEE
 }
 
-model SalesMethod {
-  id        String         @id @default(cuid())
-  name      String
-  code      String         @unique
-  isActive  Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  prices    ProductPrice[]
-}
-
-model ProductPrice {
-  id            String      @id @default(cuid())
-  productId     String
-  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  salesMethodId String
-  salesMethod   SalesMethod @relation(fields: [salesMethodId], references: [id], onDelete: Cascade)
-  price         Int
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  @@unique([productId, salesMethodId])
+enum SalesMethod {
+  OFFLINE
+  SHOPEEFOOD
+  GRABFOOD
 }

@@ -5,13 +5,14 @@ import AppShell from "@/components/layout/AppShell";
 import { Toast, useToast } from "@/components/ui/Toast";
 import { CurrencyText } from "@/components/ui/CurrencyText";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { User, Product } from "@/types";
-import { Plus, Pencil, Trash2, X, PackageOpen, Check, PackageX } from "lucide-react";
+import { User, Product, SalesMethod } from "@/types";
+import { Plus, Pencil, Trash2, X, PackageOpen, Check, PackageX, Store } from "lucide-react";
 
 export default function ProdukPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [methods, setMethods] = useState<SalesMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast, showToast, hideToast } = useToast();
 
@@ -19,7 +20,7 @@ export default function ProdukPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [formName, setFormName] = useState("");
-  const [formPrice, setFormPrice] = useState("");
+  const [formPrices, setFormPrices] = useState<Record<string, string>>({});
   const [formActive, setFormActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -28,14 +29,19 @@ export default function ProdukPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [userRes, productRes] = await Promise.all([
+      const [userRes, productRes, methodsRes] = await Promise.all([
         fetch("/api/auth/me"),
         fetch("/api/products"),
+        fetch("/api/sales-methods?active=true")
       ]);
       if (!userRes.ok) { router.push("/login"); return; }
       if (!productRes.ok) throw new Error("Gagal memuat data produk");
 
       setUser((await userRes.json()).user);
+      
+      const methodsData = await methodsRes.json();
+      setMethods(Array.isArray(methodsData) ? methodsData : []);
+      
       const productsData = await productRes.json();
       setProducts(Array.isArray(productsData) ? productsData : []);
     } catch {
@@ -50,23 +56,61 @@ export default function ProdukPage() {
   const openAddModal = () => {
     setEditId(null);
     setFormName("");
-    setFormPrice("");
     setFormActive(true);
+    
+    // Set default empty prices
+    const defaultPrices: Record<string, string> = {};
+    methods.forEach(m => defaultPrices[m.id] = "");
+    setFormPrices(defaultPrices);
+    
     setModalOpen(true);
   };
 
   const openEditModal = (product: Product) => {
     setEditId(product.id);
     setFormName(product.name);
-    setFormPrice(product.price.toString());
     setFormActive(product.isActive);
+    
+    // Map existing prices
+    const pricesMap: Record<string, string> = {};
+    methods.forEach(m => {
+      const existing = product.prices?.find(p => p.salesMethodId === m.id);
+      pricesMap[m.id] = existing ? existing.price.toString() : "";
+    });
+    setFormPrices(pricesMap);
+    
     setModalOpen(true);
+  };
+
+  const handlePriceChange = (methodId: string, value: string) => {
+    setFormPrices(prev => ({
+      ...prev,
+      [methodId]: value
+    }));
   };
 
   const handleSave = async () => {
     if (!formName.trim()) { showToast("Nama produk wajib diisi", "error"); return; }
-    const price = parseInt(formPrice);
-    if (isNaN(price) || price < 0) { showToast("Harga tidak valid", "error"); return; }
+    
+    // Format prices array payload
+    const parsedPrices: { salesMethodId: string, price: number }[] = [];
+    for (const m of methods) {
+      const rawPrice = formPrices[m.id];
+      const parsedPrice = parseInt(rawPrice);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        showToast(`Harga untuk ${m.name} tidak valid`, "error");
+        return;
+      }
+      parsedPrices.push({
+        salesMethodId: m.id,
+        price: parsedPrice
+      });
+    }
+
+    if (parsedPrices.length === 0) {
+      showToast("Minimal satu harga penjualan wajib diisi", "error");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -75,7 +119,11 @@ export default function ProdukPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: formName.trim(), price, isActive: formActive }),
+        body: JSON.stringify({ 
+          name: formName.trim(), 
+          prices: parsedPrices, 
+          isActive: formActive 
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -119,8 +167,18 @@ export default function ProdukPage() {
   const activeProducts = products.filter(p => p.isActive);
   const inactiveProducts = products.filter(p => !p.isActive);
 
+  // Helper function to get default offline price for display, or first available price
+  const getDisplayPrice = (product: Product) => {
+    if (product.prices && product.prices.length > 0) {
+      // Find OFFLINE code if possible, but we don't know the code here unless we map it.
+      // So let's just use the first price available
+      return product.prices[0].price;
+    }
+    return 0;
+  };
+
   return (
-    <AppShell user={user} title="Manajemen Produk">
+    <AppShell user={user} title="Manajemen Produk & Harga">
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
       <ConfirmDialog
@@ -134,13 +192,11 @@ export default function ProdukPage() {
       />
 
       <div className="max-w-4xl mx-auto space-y-8 pb-10">
-        {/* Floating Add Area Mobile / Header Desktop */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-sm font-bold text-gray-400 tracking-wider uppercase">
             {activeProducts.length} Menu Aktif &bull; {inactiveProducts.length} Disembunyikan
           </p>
           <button
-            id="btn-tambah-produk"
             onClick={openAddModal}
             className="flex items-center justify-center gap-2 bg-orange-500 text-white font-extrabold px-6 py-3.5 sm:py-3 rounded-[18px] hover:bg-orange-600 active:scale-95 shadow-lg shadow-orange-500/20 transition-all z-10 w-full sm:w-auto text-sm sm:text-base"
           >
@@ -149,7 +205,6 @@ export default function ProdukPage() {
           </button>
         </div>
 
-        {/* Tabel Menu Aktif */}
         <div>
           <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
             <PackageOpen size={24} className="text-orange-500" /> Menu Tersedia
@@ -167,7 +222,20 @@ export default function ProdukPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-extrabold text-gray-900 text-base truncate">{product.name}</p>
-                    <CurrencyText amount={product.price} className="text-orange-600 font-black" />
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                      {product.prices && product.prices.length > 0 ? (
+                        product.prices.map((p, i) => {
+                          const methodName = methods.find(m => m.id === p.salesMethodId)?.code || "Metode";
+                          return (
+                            <span key={p.id} className="text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
+                              {methodName}: <CurrencyText amount={p.price} className="text-orange-600 font-bold" />
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <CurrencyText amount={getDisplayPrice(product)} className="text-orange-600 font-black" />
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
@@ -191,7 +259,6 @@ export default function ProdukPage() {
           )}
         </div>
 
-        {/* Tabel Menu Nonaktif */}
         {inactiveProducts.length > 0 && (
           <div>
             <h2 className="text-xl font-black text-gray-400 mb-4 flex items-center gap-2">
@@ -205,7 +272,7 @@ export default function ProdukPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-gray-600 line-through truncate">{product.name}</p>
-                    <CurrencyText amount={product.price} className="text-gray-500 font-bold" />
+                    <CurrencyText amount={getDisplayPrice(product)} className="text-gray-500 font-bold" />
                   </div>
                   <button
                     onClick={() => openEditModal(product)}
@@ -220,11 +287,10 @@ export default function ProdukPage() {
         )}
       </div>
 
-      {/* Editor Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setModalOpen(false)} />
-          <div className="relative bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-[32px] shadow-2xl p-6 sm:p-8 space-y-6 animate-slide-up">
+          <div className="relative bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-[32px] shadow-2xl p-6 sm:p-8 space-y-6 animate-slide-up max-h-[90vh] overflow-y-auto">
             
             <div className="flex items-center justify-between pb-2 border-b border-gray-100">
               <h2 className="font-black text-xl text-gray-900">
@@ -235,7 +301,7 @@ export default function ProdukPage() {
               </button>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Nama Menu</label>
                 <input
@@ -246,19 +312,35 @@ export default function ProdukPage() {
                   className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-transparent focus:bg-white focus:border-orange-500 focus:outline-none text-gray-900 font-semibold transition-all"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Harga (Rupiah)</label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-5 font-bold text-gray-500">Rp</span>
-                  <input
-                    type="number"
-                    value={formPrice}
-                    onChange={(e) => setFormPrice(e.target.value)}
-                    placeholder="15000"
-                    min="0"
-                    className="w-full pl-12 pr-5 py-4 rounded-2xl bg-gray-50 border-2 border-transparent focus:bg-white focus:border-orange-500 focus:outline-none text-gray-900 font-bold tracking-wider transition-all"
-                  />
-                </div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Harga per Metode Penjualan</label>
+                
+                {methods.length === 0 ? (
+                  <p className="text-sm text-red-500 bg-red-50 py-3 px-4 rounded-xl border border-red-100">
+                    Anda belum memiliki Metode Penjualan yang aktif. Silakan tambahkan di halaman Manajemen Metode terlebih dahulu.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {methods.map(method => (
+                      <div key={method.id} className="relative flex items-center">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                          <Store size={16} className="text-gray-400" />
+                          <span className="text-sm font-bold text-gray-500">{method.name}</span>
+                        </div>
+                        <span className="absolute left-32 top-1/2 -translate-y-1/2 font-bold text-gray-400">Rp</span>
+                        <input
+                          type="number"
+                          value={formPrices[method.id] || ""}
+                          onChange={(e) => handlePriceChange(method.id, e.target.value)}
+                          placeholder="15000"
+                          min="0"
+                          className="w-full pl-40 pr-5 py-4 rounded-[16px] bg-gray-50 border-2 border-transparent focus:bg-white focus:border-orange-500 focus:outline-none text-gray-900 font-black tracking-wider transition-all text-right"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {editId && (
@@ -285,8 +367,8 @@ export default function ProdukPage() {
 
             <button
               onClick={handleSave}
-              disabled={saving}
-              className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-extrabold text-lg py-4 rounded-[20px] hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-50"
+              disabled={saving || methods.length === 0}
+              className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-extrabold text-lg py-4 rounded-[20px] hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-50 mt-4"
             >
               {saving ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

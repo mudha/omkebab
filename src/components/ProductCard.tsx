@@ -5,6 +5,7 @@ import { Minus, Plus, Package } from "lucide-react";
 
 interface ProductCardProps {
   product: Product;
+  price: number;
   quantity: number;
   onIncrease: () => void;
   onDecrease: () => void;
@@ -12,6 +13,7 @@ interface ProductCardProps {
 
 export default function ProductCard({
   product,
+  price,
   quantity,
   onIncrease,
   onDecrease,
@@ -35,7 +37,7 @@ export default function ProductCard({
         {/* Info Produk */}
         <div className="flex-1 min-w-0 py-1">
           <p className="font-bold text-gray-800 text-base mb-1 truncate">{product.name}</p>
-          <CurrencyText amount={product.price} className={`font-black tracking-tight ${quantity > 0 ? "text-orange-600 text-lg" : "text-gray-500 text-base"}`} />
+          <CurrencyText amount={price} className={`font-black tracking-tight ${quantity > 0 ? "text-orange-600 text-lg" : "text-gray-500 text-base"}`} />
         </div>
 
         {/* Kontrol Jumlah */}
@@ -64,8 +66,8 @@ export default function ProductCard({
       {/* Subtotal Info */}
       {quantity > 0 && (
         <div className="mt-3 pt-3 border-t border-orange-100 flex justify-between items-center text-sm font-semibold text-orange-600 bg-orange-50/50 -mx-4 -mb-4 p-4 rounded-b-3xl">
-          <span className="text-orange-600/70">{quantity} &times; <CurrencyText amount={product.price} /></span>
-          <CurrencyText amount={product.price * quantity} className="text-base" />
+          <span className="text-orange-600/70">{quantity} &times; <CurrencyText amount={price} /></span>
+          <CurrencyText amount={price * quantity} className="text-base" />
         </div>
       )}
     </div>

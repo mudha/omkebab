@@ -76,11 +76,21 @@ export async function PUT(
 
     const { branchId, salesMethod, items } = parsed.data;
 
-    // Ambil produk aktif terkini
+    // Ambil produk aktif terkini beserta harganya
     const productIds = items.map((i) => i.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds }, isActive: true },
-    });
+    const [products, activeSalesMethod] = await Promise.all([
+      prisma.product.findMany({
+        where: { id: { in: productIds }, isActive: true },
+        include: { prices: true }, // Perlu harga spesifik per metode
+      }),
+      prisma.salesMethod.findUnique({
+        where: { code: salesMethod, isActive: true },
+      })
+    ]);
+
+    if (!activeSalesMethod) {
+      return NextResponse.json({ error: "Metode penjualan tidak valid atau tidak aktif" }, { status: 400 });
+    }
 
     if (products.length !== productIds.length) {
       return NextResponse.json({ error: "Ada produk tidak valid/nonaktif. Silakan periksa kembali." }, { status: 400 });
@@ -88,16 +98,28 @@ export async function PUT(
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 
-    const transactionItems = items.map((item) => {
+    const transactionItems = [];
+    for (const item of items) {
       const product = productMap.get(item.productId)!;
-      return {
+      
+      let finalPrice = 0;
+      const specificPrice = product.prices.find((p: any) => p.salesMethodId === activeSalesMethod.id);
+      if (specificPrice) {
+        finalPrice = specificPrice.price;
+      } else if (product.prices && product.prices.length > 0) {
+        finalPrice = product.prices[0].price; // fallback ke harga pertama
+      } else {
+        return NextResponse.json({ error: `Harga untuk '${product.name}' pada metode ini belum disetel!` }, { status: 400 });
+      }
+
+      transactionItems.push({
         productId: item.productId,
         productNameSnapshot: product.name,
-        priceSnapshot: product.price,
+        priceSnapshot: finalPrice,
         quantity: item.quantity,
-        subtotal: product.price * item.quantity,
-      };
-    });
+        subtotal: finalPrice * item.quantity,
+      });
+    }
 
     const totalAmount = transactionItems.reduce((sum, i) => sum + i.subtotal, 0);
 

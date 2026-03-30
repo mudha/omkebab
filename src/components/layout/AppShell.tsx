@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { LogOut, Menu, X, LayoutDashboard, ShoppingCart, Package, ClipboardList, Store, Users } from "lucide-react";
+import { LogOut, Menu, X, LayoutDashboard, ShoppingCart, Package, ClipboardList, Store, Users, MapPin } from "lucide-react";
 import { User } from "@/types";
 
 interface AppShellProps {
@@ -15,6 +15,7 @@ const adminNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transaksi", label: "Riwayat Transaksi", icon: ClipboardList },
   { href: "/produk", label: "Manajemen Produk", icon: Package },
+  { href: "/metode-penjualan", label: "Metode Penjualan", icon: MapPin },
   { href: "/pengguna", label: "Manajemen Pengguna", icon: Users },
   { href: "/cabang", label: "Manajemen Cabang", icon: Store },
   { href: "/penjualan", label: "Input Penjualan", icon: ShoppingCart }, // Admin juga bisa input

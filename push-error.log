@@ -1,8 +1,7 @@
-Loaded Prisma config from prisma.config.ts.
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "neondb", schema "public" at "ep-tiny-voice-a1gt9upu.ap-southeast-1.aws.neon.tech"
 
-Prisma schema loaded from prisma\schema.prisma.
-Datasource "db": PostgreSQL database "om_kebab", schema "public" at "localhost:5432"
+Error: P1001: Can't reach database server at `ep-tiny-voice-a1gt9upu.ap-southeast-1.aws.neon.tech:5432`
 
-Error: P1001: Can't reach database server at `localhost:5432`
-
-Please make sure your database server is running at `localhost:5432`.
+Please make sure your database server is running at `ep-tiny-voice-a1gt9upu.ap-southeast-1.aws.neon.tech:5432`.

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-
 import { getUserFromRequest } from "@/lib/jwt";
-import { createProductSchema } from "@/lib/validations";
+import { createSalesMethodSchema } from "@/lib/validations";
 import { unstable_noStore as noStore } from "next/cache";
 
 export async function GET(req: NextRequest) {
@@ -13,15 +12,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const onlyActive = searchParams.get("active") === "true";
 
-  const products = await prisma.product.findMany({
+  const methods = await prisma.salesMethod.findMany({
     where: onlyActive ? { isActive: true } : {},
     orderBy: { name: "asc" },
-    include: {
-      prices: true,
-    },
   });
 
-  return NextResponse.json(products);
+  return NextResponse.json(methods);
 }
 
 export async function POST(req: NextRequest) {
@@ -31,33 +27,25 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const parsed = createProductSchema.safeParse(body);
+  const parsed = createSalesMethodSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const { name, isActive, prices } = parsed.data;
-
   try {
-    const product = await prisma.product.create({ 
-      data: {
-        name,
-        isActive,
-        prices: {
-          create: prices.map(p => ({
-            salesMethodId: p.salesMethodId,
-            price: p.price
-          }))
-        }
-      },
-      include: {
-        prices: true
-      }
+    const existing = await prisma.salesMethod.findUnique({
+      where: { code: parsed.data.code },
     });
-    return NextResponse.json(product, { status: 201 });
+
+    if (existing) {
+      return NextResponse.json({ error: "Kode metode penjualan sudah digunakan" }, { status: 400 });
+    }
+
+    const method = await prisma.salesMethod.create({ data: parsed.data });
+    return NextResponse.json(method, { status: 201 });
   } catch (error) {
-    console.error("Error creating product:", error);
-    return NextResponse.json({ error: "Gagal membuat produk" }, { status: 500 });
+    console.error("Error creating sales method:", error);
+    return NextResponse.json({ error: "Gagal membuat metode penjualan" }, { status: 500 });
   }
 }
 

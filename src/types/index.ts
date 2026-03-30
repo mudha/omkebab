@@ -14,11 +14,19 @@ export interface Branch {
   isActive?: boolean;
 }
 
+export interface SalesMethod {
+  id: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
+
+
 export interface Product {
   id: string;
   name: string;
-  price: number;
   isActive: boolean;
+  prices?: { id: string; salesMethodId: string; price: number }[];
 }
 
 export interface TransactionItem {
@@ -36,7 +44,7 @@ export interface Transaction {
   createdAt: string;
   branchId: string;
   branch?: { name: string };
-  salesMethod: "OFFLINE" | "SHOPEEFOOD" | "GRABFOOD";
+  salesMethod: string;
   totalAmount: number;
   createdByUserId: string;
   createdBy?: { name: string; username?: string };

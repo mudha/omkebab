@@ -5,11 +5,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password wajib diisi"),
 });
 
+export const createSalesMethodSchema = z.object({
+  name: z.string().min(1, "Nama metode penjualan wajib diisi"),
+  code: z.string().min(1, "Kode wajib diisi").toUpperCase(),
+  isActive: z.boolean().optional().default(true),
+});
+
+export const updateSalesMethodSchema = createSalesMethodSchema.partial();
+
+
 export const createTransactionSchema = z.object({
   branchId: z.string().min(1, "Cabang wajib dipilih"),
-  salesMethod: z.enum(["OFFLINE", "SHOPEEFOOD", "GRABFOOD"] as const, {
-    message: "Metode penjualan tidak valid",
-  }),
+  salesMethod: z.string().min(1, "Metode penjualan wajib diisi"),
   items: z
     .array(
       z.object({
@@ -22,8 +29,11 @@ export const createTransactionSchema = z.object({
 
 export const createProductSchema = z.object({
   name: z.string().min(1, "Nama produk wajib diisi"),
-  price: z.number().int().min(0, "Harga tidak valid"),
   isActive: z.boolean().optional().default(true),
+  prices: z.array(z.object({
+    salesMethodId: z.string().min(1, "Metode penjualan wajib diisi"),
+    price: z.number().int().min(0, "Harga tidak valid"),
+  })).min(1, "Minimal satu harga penjualan wajib diisi"),
 });
 
 export const updateProductSchema = createProductSchema.partial();
@@ -32,12 +42,14 @@ export const transactionFilterSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   branchId: z.string().optional(),
-  salesMethod: z.enum(["OFFLINE", "SHOPEEFOOD", "GRABFOOD"] as const).optional(),
+  salesMethod: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+export type CreateSalesMethodInput = z.infer<typeof createSalesMethodSchema>;
+export type UpdateSalesMethodInput = z.infer<typeof updateSalesMethodSchema>;
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;

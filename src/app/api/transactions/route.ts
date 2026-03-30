@@ -59,30 +59,54 @@ export async function POST(req: NextRequest) {
 
   const { branchId, salesMethod, items } = parsed.data;
 
-  // Ambil produk aktif
+  // Cek apakah sales method valid
+  const activeSalesMethod = await prisma.salesMethod.findUnique({
+    where: { code: salesMethod, isActive: true }
+  });
+
+  if (!activeSalesMethod) {
+    return NextResponse.json({ error: "Metode penjualan tidak valid atau belum aktif" }, { status: 400 });
+  }
+
+  // Ambil produk aktif dan harganya berdasarkan metode
   const productIds = items.map((i) => i.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, isActive: true },
+    include: {
+      prices: {
+        where: { salesMethodId: activeSalesMethod.id }
+      }
+    }
   });
 
   if (products.length !== productIds.length) {
-    return NextResponse.json({ error: "Produk tidak valid atau sudah tidak aktif" }, { status: 400 });
+    return NextResponse.json({ error: "Beberapa produk tidak valid atau sudah tidak aktif" }, { status: 400 });
   }
 
-  const productMap = new Map(products.map((p: { id: string; price: number; name: string }) => [p.id, p]));
+  const productMap = new Map(products.map((p: any) => [p.id, p]));
 
   // Hitung items dan total
-  const transactionItems = items.map((item) => {
-    const product: { id: string; price: number; name: string } = productMap.get(item.productId)! as any;
-    const subtotal = product.price * item.quantity;
-    return {
+  const transactionItems = [];
+  for (const item of items) {
+    const product: { id: string; price: number; name: string, prices: any[] } = productMap.get(item.productId)! as any;
+    
+    // Dapatkan harga spesifik dari ProductPrice, fallback jika kosong (sementara)
+    let finalPrice = product.price; 
+    if (product.prices && product.prices.length > 0) {
+      finalPrice = product.prices[0].price;
+    } else {
+      return NextResponse.json({ error: `Harga untuk '${product.name}' pada '${activeSalesMethod.name}' belum disetel!` }, { status: 400 });
+    }
+
+    const subtotal = finalPrice * item.quantity;
+    transactionItems.push({
       productId: item.productId,
       productNameSnapshot: product.name,
-      priceSnapshot: product.price,
+      priceSnapshot: finalPrice,
       quantity: item.quantity,
       subtotal,
-    };
-  });
+    });
+  }
 
   const totalAmount = transactionItems.reduce((sum, i) => sum + i.subtotal, 0);
   const transactionNumber = await generateTransactionNumber();
