@@ -9,36 +9,16 @@
   Creating an optimized production build ...
 Γ£ô Compiled successfully in 2.7s
   Running TypeScript ...
-  Finished TypeScript in 2.6s ...
-  Collecting page data using 15 workers ...
-  Generating static pages using 15 workers (0/9) ...
-  Generating static pages using 15 workers (2/9) 
-  Generating static pages using 15 workers (4/9) 
-  Generating static pages using 15 workers (6/9) 
-Γ£ô Generating static pages using 15 workers (9/9) in 240ms
-  Finalizing page optimization ...
+Failed to type check.
 
-Route (app)
-Γöî ╞Æ /
-Γö£ Γùï /_not-found
-Γö£ ╞Æ /api/auth/login
-Γö£ ╞Æ /api/auth/logout
-Γö£ ╞Æ /api/auth/me
-Γö£ ╞Æ /api/branches
-Γö£ ╞Æ /api/dashboard
-Γö£ ╞Æ /api/products
-Γö£ ╞Æ /api/products/[id]
-Γö£ ╞Æ /api/transactions
-Γö£ ╞Æ /api/transactions/[id]
-Γö£ Γùï /dashboard
-Γö£ Γùï /login
-Γö£ Γùï /penjualan
-Γö£ Γùï /produk
-Γöö Γùï /transaksi
+./src/app/pengguna/page.tsx:183:57
+Type error: Property 'branch' does not exist on type 'User'. Did you mean 'branchId'?
 
-
-╞Æ Proxy (Middleware)
-
-Γùï  (Static)   prerendered as static content
-╞Æ  (Dynamic)  server-rendered on demand
-
+  181 | ...item) => (
+  182 | ... className={`font-semibold text-gray-600 text-xs ${item.isActive === false ? 'opacity-...
+> 183 | ...em.role === "ADMIN" ? "Akses Pusat" : item.branch?.name || "Belum Ditugaskan"}
+      |                                               ^
+  184 | ...n>
+  185 | ...
+  186 | ...
+Next.js build worker exited with code: 1 and signal: null

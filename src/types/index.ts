@@ -1,14 +1,17 @@
-﻿export interface User {
-  userId: string;
+export interface User {
+  id: string;
   username: string;
   name: string;
   role: "ADMIN" | "EMPLOYEE";
   branchId: string | null;
+  branch?: { id: string; name: string } | null;
+  isActive?: boolean;
 }
 
 export interface Branch {
   id: string;
   name: string;
+  isActive?: boolean;
 }
 
 export interface Product {

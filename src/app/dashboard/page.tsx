@@ -150,9 +150,9 @@ export default function DashboardPage() {
 
         {/* Top Summary Blocks */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SummaryCard title="Total Penjualan" value={data.summary.totalRevenue} isCurrency icon={<Coins size={28} />} colorType="orange" />
-          <SummaryCard title="Transaksi" value={data.summary.totalTransactions} subtitle={`Dari ${data.summary.totalItemsSold} item menu yang terjual`} icon={<ShoppingBag size={28} />} colorType="blue" />
-          <SummaryCard title="Rata-Rata" value={data.summary.averageTransaction} isCurrency subtitle="Pendapatan rata-rata per pesanan" icon={<TrendingUp size={28} />} colorType="green" />
+          <SummaryCard title="Total Penjualan" value={data.summary.totalAmount} isCurrency icon={<Coins size={28} />} colorType="orange" />
+          <SummaryCard title="Transaksi" value={data.summary.transactionCount} subtitle="Total pesanan yang diproses" icon={<ShoppingBag size={28} />} colorType="blue" />
+          <SummaryCard title="Rata-Rata" value={data.summary.avgPerTransaction} isCurrency subtitle="Pendapatan rata-rata per pesanan" icon={<TrendingUp size={28} />} colorType="green" />
         </div>
 
         {/* Graphics Section */}

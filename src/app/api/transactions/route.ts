@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       branchId,
       salesMethod,
       totalAmount,
-      createdByUserId: user.userId,
+      createdByUserId: user.id,
       items: { create: transactionItems },
     },
     include: {
