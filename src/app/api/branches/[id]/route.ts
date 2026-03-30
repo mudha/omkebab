@@ -4,15 +4,15 @@ import { getUserFromRequest } from "@/lib/jwt";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: branchId } = await params;
     const user = await getUserFromRequest(req);
     if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
     }
 
-    const branchId = params.id;
     const body = await req.json();
     const { name, isActive } = body;
 
@@ -38,9 +38,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(req);
     if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
@@ -48,7 +49,7 @@ export async function DELETE(
 
     // Rather than actual delete, we just soft-delete by deactivating it
     const updated = await prisma.branch.update({
-      where: { id: params.id },
+      where: { id },
       data: { isActive: false }
     });
 

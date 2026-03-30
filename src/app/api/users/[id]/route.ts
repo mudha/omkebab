@@ -5,15 +5,15 @@ import { hash } from "bcryptjs";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: userId } = await params;
     const currentUser = await getUserFromRequest(req);
     if (!currentUser || currentUser.role !== "ADMIN") {
       return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
     }
 
-    const userId = params.id;
     const body = await req.json();
     const { name, username, password, role, branchId, isActive } = body;
 
@@ -66,21 +66,22 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const currentUser = await getUserFromRequest(req);
     if (!currentUser || currentUser.role !== "ADMIN") {
       return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
     }
     
     // Prevent self-deactivation
-    if (currentUser.id === params.id) {
+    if (currentUser.id === id) {
        return NextResponse.json({ error: "Anda tidak bisa menonaktifkan akun yang sedang aktif ini" }, { status: 400 });
     }
 
     const updated = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: { isActive: false }
     });
 
