@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum SalesMethod {
+  OFFLINE
+  SHOPEEFOOD
+  GRABFOOD
+}
+
+model Branch {
+  id           String        @id @default(cuid())
+  name         String
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  users        User[]
+  transactions Transaction[]
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  username     String        @unique
+  passwordHash String
+  role         Role          @default(EMPLOYEE)
+  isActive     Boolean       @default(true)
+  branchId     String?
+  branch       Branch?       @relation(fields: [branchId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+model Product {
+  id               String            @id @default(cuid())
+  name             String
+  price            Int
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  transactionItems TransactionItem[]
+}
+
+model Transaction {
+  id                String            @id @default(cuid())
+  transactionNumber String            @unique
+  createdAt         DateTime          @default(now())
+  branchId          String
+  branch            Branch            @relation(fields: [branchId], references: [id])
+  salesMethod       SalesMethod
+  totalAmount       Int
+  createdByUserId   String
+  createdBy         User              @relation(fields: [createdByUserId], references: [id])
+  items             TransactionItem[]
+
+  @@index([branchId])
+  @@index([createdAt])
+  @@index([salesMethod])
+}
+
+model TransactionItem {
+  id                  String      @id @default(cuid())
+  transactionId       String
+  transaction         Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId           String
+  product             Product     @relation(fields: [productId], references: [id])
+  productNameSnapshot String
+  priceSnapshot       Int
+  quantity            Int
+  subtotal            Int
+}

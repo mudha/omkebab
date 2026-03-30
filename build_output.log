@@ -1,0 +1,44 @@
+
+> om-kebab@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.1 (Turbopack)
+- Environments: .env
+
+ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 2.7s
+  Running TypeScript ...
+  Finished TypeScript in 2.6s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/9) ...
+  Generating static pages using 15 workers (2/9) 
+  Generating static pages using 15 workers (4/9) 
+  Generating static pages using 15 workers (6/9) 
+Γ£ô Generating static pages using 15 workers (9/9) in 240ms
+  Finalizing page optimization ...
+
+Route (app)
+Γöî ╞Æ /
+Γö£ Γùï /_not-found
+Γö£ ╞Æ /api/auth/login
+Γö£ ╞Æ /api/auth/logout
+Γö£ ╞Æ /api/auth/me
+Γö£ ╞Æ /api/branches
+Γö£ ╞Æ /api/dashboard
+Γö£ ╞Æ /api/products
+Γö£ ╞Æ /api/products/[id]
+Γö£ ╞Æ /api/transactions
+Γö£ ╞Æ /api/transactions/[id]
+Γö£ Γùï /dashboard
+Γö£ Γùï /login
+Γö£ Γùï /penjualan
+Γö£ Γùï /produk
+Γöö Γùï /transaksi
+
+
+╞Æ Proxy (Middleware)
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+
