@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/jwt";
 const COOKIE_NAME = "om-kebab-token";
 
 // Route yang tidak perlu auth
-const PUBLIC_ROUTES = ["/login", "/api/auth/login"];
+const PUBLIC_ROUTES = ["/login", "/api/auth/login", "/api/setup"];
 
 // Route khusus admin
 const ADMIN_ROUTES = ["/dashboard", "/produk", "/transaksi", "/api/dashboard"];
