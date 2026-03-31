@@ -7,7 +7,7 @@ import { DataTable, ColumnDefinition } from "@/components/ui/DataTable";
 import { CurrencyText } from "@/components/ui/CurrencyText";
 import { formatTanggalSingkat, formatTanggalInput, labelMetode } from "@/lib/format";
 import { User, Transaction, Branch } from "@/types";
-import { ChevronLeft, ChevronRight, Eye, X, ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, X, ClipboardList, Trash2 } from "lucide-react";
 
 type TransactionDetail = Transaction;
 
@@ -33,6 +33,7 @@ export default function TransaksiPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detail, setDetail] = useState<TransactionDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -78,6 +79,27 @@ export default function TransaksiPage() {
       console.error("Failed to load detail");
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus transaksi ini? Aksi ini tidak dapat dibatalkan.")) return;
+    
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setDetailOpen(false);
+        setDetail(null);
+        fetchData();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menghapus transaksi.");
+      }
+    } catch {
+      alert("Terjadi kesalahan jaringan.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -282,12 +304,24 @@ export default function TransaksiPage() {
                 <h2 className="font-black text-xl text-gray-900">Nota Transaksi</h2>
                 <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">{detail?.transactionNumber || "Menyiapkan..."}</p>
               </div>
-              <button
-                onClick={() => { setDetailOpen(false); setDetail(null); }}
-                className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
-              >
-                <X size={20} strokeWidth={3} />
-              </button>
+              <div className="flex items-center gap-2">
+                {user.role === "ADMIN" && detail && (
+                  <button
+                    onClick={() => handleDelete(detail.id)}
+                    disabled={deleteLoading}
+                    className="w-10 h-10 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-500 rounded-full transition-colors disabled:opacity-50"
+                    title="Hapus Transaksi"
+                  >
+                    {deleteLoading ? <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={20} strokeWidth={2.5} />}
+                  </button>
+                )}
+                <button
+                  onClick={() => { setDetailOpen(false); setDetail(null); }}
+                  className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
+                >
+                  <X size={20} strokeWidth={3} />
+                </button>
+              </div>
             </div>
 
             <div className="p-6 overflow-y-auto">

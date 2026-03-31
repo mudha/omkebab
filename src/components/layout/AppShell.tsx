@@ -2,8 +2,9 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { LogOut, Menu, X, LayoutDashboard, ShoppingCart, Package, ClipboardList, Store, Users, MapPin } from "lucide-react";
+import { LogOut, Menu, X, LayoutDashboard, ShoppingCart, Package, ClipboardList, Store, Users, MapPin, KeyRound } from "lucide-react";
 import { User } from "@/types";
+import { Toast, useToast } from "@/components/ui/Toast";
 
 interface AppShellProps {
   user: User;
@@ -30,6 +31,12 @@ export default function AppShell({ user, children, title }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const navItems = user.role === "ADMIN" ? adminNav : employeeNav;
+  const { toast, showToast, hideToast } = useToast();
+
+  // Change Password State
+  const [pwdModalOpen, setPwdModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [pwdLoading, setPwdLoading] = useState(false);
 
   // Tutup sidebar otomatis kalau pindah halaman di mobile
   useEffect(() => {
@@ -42,8 +49,40 @@ export default function AppShell({ user, children, title }: AppShellProps) {
     router.refresh();
   };
 
+  const handleChangePassword = async () => {
+    if (!newPassword.trim()) {
+      showToast("Sandi baru tidak boleh kosong", "error");
+      return;
+    }
+    
+    // For now we assume if role is not admin, it might fail based on API, 
+    // but the user asked for Admin change password explicitly.
+    setPwdLoading(true);
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        // Hanya mengirim role eksisting dan password baru
+        body: JSON.stringify({ role: user.role, password: newPassword.trim() }),
+      });
+      if (res.ok) {
+        showToast("Kata sandi berhasil diubah!", "success");
+        setPwdModalOpen(false);
+        setNewPassword("");
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Gagal mengubah kata sandi", "error");
+      }
+    } catch {
+      showToast("Terjadi kesalahan jaringan", "error");
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
       {/* Overlay Mobile */}
       {sidebarOpen && (
         <div
@@ -70,16 +109,23 @@ export default function AppShell({ user, children, title }: AppShellProps) {
         </div>
 
         {/* User Mini Profile */}
-        <div className="px-6 py-5 mx-4 mt-6 bg-gray-50/80 rounded-2xl border border-gray-100 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center shrink-0">
+        <div className="px-6 py-5 mx-4 mt-6 bg-gray-50/80 rounded-2xl border border-gray-100 flex items-center gap-3 relative group transition-all hover:bg-white hover:shadow-sm">
+          <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center shrink-0 group-hover:border-orange-200">
             <span className="text-orange-500 font-bold text-base">
               {user.name.charAt(0).toUpperCase()}
             </span>
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pr-6">
             <p className="text-sm font-bold text-gray-800 truncate">{user.name}</p>
-            <p className="text-xs font-semibold text-orange-600">{user.role === "ADMIN" ? "Administrator" : "Karyawan"}</p>
+            <p className="text-xs font-semibold text-orange-600 truncate">{user.role === "ADMIN" ? "Administrator" : "Karyawan"}</p>
           </div>
+          <button 
+            onClick={() => setPwdModalOpen(true)}
+            className="absolute right-4 p-2 rounded-xl text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-all opacity-0 group-hover:opacity-100"
+            title="Ubah Kata Sandi"
+          >
+            <KeyRound size={18} strokeWidth={2.5} />
+          </button>
         </div>
 
         {/* Navigation */}
@@ -137,6 +183,44 @@ export default function AppShell({ user, children, title }: AppShellProps) {
           {children}
         </main>
       </div>
+
+      {/* Modal Ganti Sandi */}
+      {pwdModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setPwdModalOpen(false)} />
+          <div className="relative bg-[#f8fafc] w-full max-w-sm rounded-[32px] shadow-2xl animate-scale-in flex flex-col">
+            <div className="p-6 border-b border-gray-200/50 bg-white rounded-t-[32px] flex items-center justify-between">
+              <h2 className="font-black text-xl text-gray-900 flex items-center gap-2">
+                <KeyRound size={22} className="text-orange-500" /> Ubah Sandi
+              </h2>
+              <button onClick={() => setPwdModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
+                <X size={20} strokeWidth={3} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Kata Sandi Baru</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Ketik rahasia baru..."
+                  className="w-full px-5 py-4 rounded-2xl bg-white border border-gray-200 focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 focus:outline-none text-gray-900 font-bold tracking-widest transition-all"
+                />
+              </div>
+            </div>
+            <div className="p-6 pt-2 shrink-0">
+              <button
+                onClick={handleChangePassword}
+                disabled={pwdLoading}
+                className="w-full bg-orange-500 text-white font-black py-4 rounded-2xl hover:bg-orange-600 active:scale-95 transition-all text-base disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {pwdLoading ? <><div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> Menyimpan...</> : "Simpan Sandi Baru"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

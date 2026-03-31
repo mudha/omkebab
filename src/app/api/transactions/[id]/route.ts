@@ -148,4 +148,34 @@ export async function PUT(
   }
 }
 
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return NextResponse.json({ error: "Tidak terautentikasi" }, { status: 401 });
+    if (user.role !== "ADMIN") return NextResponse.json({ error: "Anda tidak memiliki akses" }, { status: 403 });
+
+    const { id } = await params;
+
+    const existingTx = await prisma.transaction.findUnique({
+      where: { id },
+    });
+
+    if (!existingTx) {
+      return NextResponse.json({ error: "Transaksi tidak ditemukan" }, { status: 404 });
+    }
+
+    await prisma.transaction.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ message: "Transaksi berhasil dihapus" }, { status: 200 });
+  } catch (error) {
+    console.error("[DELETE_TRANSACTION]", error);
+    return NextResponse.json({ error: "Gagal menghapus transaksi" }, { status: 500 });
+  }
+}
+
 export const dynamic = "force-dynamic";
